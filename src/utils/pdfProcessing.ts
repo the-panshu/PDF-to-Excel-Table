@@ -26,7 +26,9 @@ function normalizeText(text: string): string {
     // Remove control characters
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
     // Handle special characters that might appear as boxes
-    .replace(/□/g, ' ');
+    .replace(/□/g, ' ')
+    // Replace multiple spaces with a single space
+    .replace(/\s+/g, ' ');
   
   return normalizedText.trim();
 }
@@ -64,7 +66,7 @@ function calculateRowGrouping(items: TextItemWithLocation[]): number {
   });
   
   // Use the most common difference as a basis for row grouping with some tolerance
-  return mostCommonDiff * 0.5;
+  return mostCommonDiff * 0.6;
 }
 
 // Function to extract table-like structures from a PDF page
@@ -89,6 +91,9 @@ export async function extractTablesFromPage(page: PDFJS.PDFPageProxy): Promise<A
   for (const item of sortedItems) {
     // Normalize the text to handle encoding issues
     item.str = normalizeText(item.str);
+    
+    // Skip empty items
+    if (!item.str.trim()) continue;
     
     // If the item's y-position is significantly different from the current row,
     // start a new row (using calculated tolerance for variations in text alignment)
