@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { DocumentCheck, Download, Table } from 'lucide-react';
+import { CheckCircle, Download, Table } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import DragDropZone from '@/components/DragDropZone';
@@ -189,7 +189,7 @@ const Index = () => {
                 <ul className="space-y-4">
                   <li className="flex items-start">
                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
-                      <DocumentCheck className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-medium">Tables With Borders</h3>
@@ -198,7 +198,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-start">
                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
-                      <DocumentCheck className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-medium">Tables Without Borders</h3>
@@ -207,7 +207,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-start">
                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
-                      <DocumentCheck className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-medium">Irregular Tables</h3>
@@ -216,7 +216,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-start">
                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
-                      <DocumentCheck className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-medium">Multi-Page Support</h3>
@@ -225,7 +225,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-start">
                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
-                      <DocumentCheck className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h3 className="font-medium">Export to Excel</h3>

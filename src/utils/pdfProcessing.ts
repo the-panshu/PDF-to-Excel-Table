@@ -1,11 +1,10 @@
 
 import * as PDFJS from 'pdfjs-dist';
-import { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
 
 // Initialize PDF.js worker
 PDFJS.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
 
-interface TextItemWithLocation extends TextItem {
+interface TextItemWithLocation {
   transform: number[];
   width: number;
   height: number;
