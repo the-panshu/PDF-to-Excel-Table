@@ -17,10 +17,13 @@ const TablePreview: React.FC<TablePreviewProps> = ({
   
   // Show a preview of the selected table (limit to 10 rows for preview)
   const selectedTable = tables[selectedTableIndex];
-  const previewRows = selectedTable.slice(0, 10);
+  
+  // Get header row (first row) and data rows
+  const headerRow = selectedTable[0] || [];
+  const dataRows = selectedTable.slice(1, 11); // Show up to 10 data rows in preview
   
   // Determine max columns across all rows to handle irregular tables
-  const maxCols = Math.max(...previewRows.map(row => row.length));
+  const maxCols = Math.max(...selectedTable.map(row => row.length));
 
   return (
     <div className="space-y-4">
@@ -48,17 +51,21 @@ const TablePreview: React.FC<TablePreviewProps> = ({
           <TableHeader>
             <TableRow>
               {Array.from({ length: maxCols }).map((_, colIndex) => (
-                <TableHead key={colIndex} className="whitespace-nowrap">
-                  Column {colIndex + 1}
+                <TableHead key={colIndex} className="whitespace-nowrap font-semibold text-xs">
+                  {headerRow[colIndex] || `Column ${colIndex + 1}`}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {previewRows.map((row, rowIndex) => (
+            {dataRows.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 {Array.from({ length: maxCols }).map((_, colIndex) => (
-                  <TableCell key={colIndex} className="overflow-hidden text-ellipsis">
+                  <TableCell 
+                    key={colIndex} 
+                    className="text-xs overflow-hidden text-ellipsis"
+                    title={row[colIndex] || ''}
+                  >
                     {row[colIndex] || ''}
                   </TableCell>
                 ))}
@@ -66,9 +73,9 @@ const TablePreview: React.FC<TablePreviewProps> = ({
             ))}
           </TableBody>
         </Table>
-        {selectedTable.length > 10 && (
+        {selectedTable.length > 11 && (
           <div className="p-2 text-center text-sm text-gray-500 bg-gray-50 border-t">
-            {selectedTable.length - 10} more rows (not shown in preview)
+            {selectedTable.length - 11} more rows (not shown in preview)
           </div>
         )}
       </div>
