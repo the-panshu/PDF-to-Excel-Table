@@ -11,8 +11,12 @@ Extract tables from PDFs and convert them into Excel files easily.
 ✅ Saves extracted tables in Excel format.  
 
 ## Steps to Run the Program 🚀  
-1. **Extract the Folder**  
-2. **Install Dependencies & Run:**
+1. **Extract the Folder**
+    ```bash
+   git clone https://github.com/the-panshu/PDF-to-Excel-Table.git
+
+2. **Switch to the project directory**
+3. **Install Dependencies & Run:**
    ```bash
    npm i
    npm run dev
