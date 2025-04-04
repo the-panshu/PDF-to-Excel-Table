@@ -51,7 +51,11 @@ const TablePreview: React.FC<TablePreviewProps> = ({
           <TableHeader>
             <TableRow>
               {Array.from({ length: maxCols }).map((_, colIndex) => (
-                <TableHead key={colIndex} className="whitespace-nowrap font-semibold text-xs">
+                <TableHead 
+                  key={colIndex} 
+                  className="whitespace-nowrap font-semibold text-xs px-3 py-2 bg-gray-100"
+                  title={headerRow[colIndex] || `Column ${colIndex + 1}`}
+                >
                   {headerRow[colIndex] || `Column ${colIndex + 1}`}
                 </TableHead>
               ))}
@@ -63,7 +67,7 @@ const TablePreview: React.FC<TablePreviewProps> = ({
                 {Array.from({ length: maxCols }).map((_, colIndex) => (
                   <TableCell 
                     key={colIndex} 
-                    className="text-xs overflow-hidden text-ellipsis"
+                    className="text-xs p-2 max-w-[200px] overflow-hidden text-ellipsis"
                     title={row[colIndex] || ''}
                   >
                     {row[colIndex] || ''}

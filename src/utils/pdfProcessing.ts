@@ -69,6 +69,43 @@ function calculateRowGrouping(items: TextItemWithLocation[]): number {
   return mostCommonDiff * 0.6;
 }
 
+// Function to detect if a row is likely a header row
+function isLikelyHeaderRow(row: TextItemWithLocation[], allRows: TextItemWithLocation[][]): boolean {
+  // Check if it's the first row
+  if (allRows.indexOf(row) === 0) return true;
+  
+  // Check if font is different/bold (some PDFs mark headers with different fonts)
+  const fontInfo = row.map(item => item.fontName || '');
+  const containsBold = fontInfo.some(font => font.toLowerCase().includes('bold'));
+  
+  // Check if this row is followed by data rows with similar column structure
+  const rowIndex = allRows.indexOf(row);
+  if (rowIndex >= 0 && rowIndex < allRows.length - 1) {
+    const nextRow = allRows[rowIndex + 1];
+    
+    // If next row has more cells or different structure, this might be a header
+    if (nextRow && Math.abs(row.length - nextRow.length) <= 1) {
+      const rowXPositions = row.map(item => item.transform[4]);
+      const nextRowXPositions = nextRow.map(item => item.transform[4]);
+      
+      // Check if X positions align (columns align)
+      let matching = 0;
+      for (const xPos of rowXPositions) {
+        if (nextRowXPositions.some(nextX => Math.abs(xPos - nextX) < 10)) {
+          matching++;
+        }
+      }
+      
+      // If most positions match, this is likely not a header but part of the data
+      if (matching >= Math.min(row.length, nextRow.length) * 0.7) {
+        return false;
+      }
+    }
+  }
+  
+  return containsBold || rowIndex === 0;
+}
+
 // Function to extract table-like structures from a PDF page
 export async function extractTablesFromPage(page: PDFJS.PDFPageProxy): Promise<Array<Array<Array<string>>>> {
   const textContent = await page.getTextContent();
@@ -111,50 +148,108 @@ export async function extractTablesFromPage(page: PDFJS.PDFPageProxy): Promise<A
   if (currentRow.length > 0) {
     rows.push(currentRow);
   }
+
+  // For each row, sort items by x-position (horizontal) to preserve column order
+  for (let i = 0; i < rows.length; i++) {
+    rows[i] = rows[i].sort((a, b) => a.transform[4] - b.transform[4]);
+  }
   
-  // Detect tables by looking for row patterns
+  // Detect tables by looking for consistent column structures
   const tables: Array<Array<Array<string>>> = [];
   let currentTable: Array<Array<string>> = [];
   let inTable = false;
+  let headerRow: TextItemWithLocation[] | null = null;
   
   // Minimum number of columns to consider a row as part of a table
   const MIN_COLUMNS_FOR_TABLE = 2;
   
-  // Function to detect column boundaries from all rows
-  function detectColumns(rows: TextItemWithLocation[][]): number[] {
-    // Flatten all x coordinates
-    const allXCoords: number[] = [];
-    rows.forEach(row => {
-      row.forEach(item => {
-        // Start and end positions of the text item
-        allXCoords.push(item.transform[4]);
-        allXCoords.push(item.transform[4] + item.width);
+  // Function to detect and align columns across rows
+  function alignRowsToColumns(rows: TextItemWithLocation[][]): Array<Array<string>> {
+    if (rows.length === 0) return [];
+    
+    // Identify the header row if it exists
+    headerRow = null;
+    for (let i = 0; i < Math.min(rows.length, 3); i++) { // Check first few rows
+      if (isLikelyHeaderRow(rows[i], rows)) {
+        headerRow = rows[i];
+        break;
+      }
+    }
+    
+    // If no header was found, use the first row
+    if (!headerRow && rows.length > 0) {
+      headerRow = rows[0];
+    }
+    
+    // Create column boundaries
+    const columnPositions: number[] = [];
+    if (headerRow) {
+      // Use header positions as column boundaries
+      headerRow.forEach(item => {
+        columnPositions.push(item.transform[4] + (item.width / 2));
       });
+    } else {
+      // Identify column boundaries based on all rows
+      const allXPositions: number[] = [];
+      rows.forEach(row => {
+        row.forEach(item => {
+          allXPositions.push(item.transform[4]);
+        });
+      });
+      
+      // Sort and find clusters
+      const sortedX = [...allXPositions].sort((a, b) => a - b);
+      let prevX = -100; // Initial offset
+      
+      for (const x of sortedX) {
+        if (x - prevX > 10) { // New column
+          columnPositions.push(x);
+          prevX = x;
+        }
+      }
+    }
+
+    // Now create a structured table with cells aligned to columns
+    const alignedTable: Array<Array<string>> = [];
+    
+    rows.forEach(row => {
+      const rowData: string[] = new Array(columnPositions.length).fill('');
+      
+      row.forEach(item => {
+        // Find which column this item belongs to
+        const itemCenter = item.transform[4] + (item.width / 2);
+        let columnIndex = 0;
+        
+        // Find closest column
+        let minDistance = Number.MAX_VALUE;
+        for (let i = 0; i < columnPositions.length; i++) {
+          const distance = Math.abs(itemCenter - columnPositions[i]);
+          if (distance < minDistance) {
+            minDistance = distance;
+            columnIndex = i;
+          }
+        }
+        
+        // Ensure we don't exceed column bounds
+        columnIndex = Math.min(columnIndex, columnPositions.length - 1);
+        
+        // Add text to the corresponding column
+        if (rowData[columnIndex]) {
+          rowData[columnIndex] += ' ' + item.str;
+        } else {
+          rowData[columnIndex] = item.str;
+        }
+      });
+      
+      // Clean up row data
+      const cleanedRow = rowData.map(cell => cell.trim()).filter(cell => cell !== '');
+      
+      if (cleanedRow.length > 0) {
+        alignedTable.push(cleanedRow);
+      }
     });
     
-    // Sort and deduplicate coordinates
-    const uniqueXCoords = [...new Set(allXCoords.sort((a, b) => a - b))];
-    
-    // Find clusters of coordinates that are close to each other
-    const columnBoundaries: number[] = [];
-    let currentCluster: number[] = [uniqueXCoords[0]];
-    
-    for (let i = 1; i < uniqueXCoords.length; i++) {
-      const diff = uniqueXCoords[i] - uniqueXCoords[i-1];
-      if (diff > 10) { // If gap is significant, it's a new column
-        // Add average of cluster as column boundary
-        columnBoundaries.push(currentCluster.reduce((sum, val) => sum + val, 0) / currentCluster.length);
-        currentCluster = [];
-      }
-      currentCluster.push(uniqueXCoords[i]);
-    }
-    
-    // Add the last cluster
-    if (currentCluster.length > 0) {
-      columnBoundaries.push(currentCluster.reduce((sum, val) => sum + val, 0) / currentCluster.length);
-    }
-    
-    return columnBoundaries;
+    return alignedTable;
   }
   
   // Find potential table rows (rows with multiple items)
@@ -162,55 +257,11 @@ export async function extractTablesFromPage(page: PDFJS.PDFPageProxy): Promise<A
   
   // If we have enough rows to form a table
   if (potentialTableRows.length >= 2) {
-    // Detect column boundaries based on all potential table rows
-    const columnBoundaries = detectColumns(potentialTableRows);
+    // Process the rows to get aligned table
+    const structuredTable = alignRowsToColumns(potentialTableRows);
     
-    // Process all rows to create a structured table
-    for (const row of rows) {
-      // Create an array to represent cells in this row
-      const cells: string[] = new Array(columnBoundaries.length).fill('');
-      
-      // Place each text item in the appropriate cell
-      for (const item of row) {
-        const itemX = item.transform[4];
-        // Find which column this item belongs to
-        let columnIndex = 0;
-        
-        while (columnIndex < columnBoundaries.length - 1 && 
-               itemX >= (columnBoundaries[columnIndex] + columnBoundaries[columnIndex + 1]) / 2) {
-          columnIndex++;
-        }
-        
-        // Add text to the correct cell (append if cell already has content)
-        cells[columnIndex] = cells[columnIndex] 
-          ? cells[columnIndex] + ' ' + item.str
-          : item.str;
-      }
-      
-      // Trim whitespace from cell values
-      const processedCells = cells.map(cell => cell.trim());
-      
-      // If row has content, add it to the current table
-      if (processedCells.some(cell => cell !== '')) {
-        if (!inTable) {
-          inTable = true;
-          currentTable = [];
-        }
-        currentTable.push(processedCells);
-      } else if (inTable && currentTable.length > 0) {
-        // Empty row after table content - could be a table separator
-        // Add the current table to our collection if it has multiple rows
-        if (currentTable.length >= 2) {
-          tables.push([...currentTable]);
-        }
-        currentTable = [];
-        inTable = false;
-      }
-    }
-    
-    // Add the last table if it exists
-    if (inTable && currentTable.length >= 2) {
-      tables.push(currentTable);
+    if (structuredTable.length >= 2) { // Need at least header + one data row
+      tables.push(structuredTable);
     }
   }
   
