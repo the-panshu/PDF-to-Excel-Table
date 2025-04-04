@@ -15,18 +15,18 @@ const TablePreview: React.FC<TablePreviewProps> = ({
 }) => {
   if (tables.length === 0) return null;
   
-  // Show a preview of the selected table (limit to 5 rows for preview)
+  // Show a preview of the selected table (limit to 10 rows for preview)
   const selectedTable = tables[selectedTableIndex];
-  const previewRows = selectedTable.slice(0, 5);
+  const previewRows = selectedTable.slice(0, 10);
   
   // Determine max columns across all rows to handle irregular tables
   const maxCols = Math.max(...previewRows.map(row => row.length));
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap">
         <h3 className="text-lg font-medium">Table Preview</h3>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
           {tables.map((_, index) => (
             <button
               key={index}
@@ -43,12 +43,12 @@ const TablePreview: React.FC<TablePreviewProps> = ({
         </div>
       </div>
       
-      <div className="border rounded-md overflow-hidden">
+      <div className="border rounded-md overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
               {Array.from({ length: maxCols }).map((_, colIndex) => (
-                <TableHead key={colIndex}>
+                <TableHead key={colIndex} className="whitespace-nowrap">
                   Column {colIndex + 1}
                 </TableHead>
               ))}
@@ -58,7 +58,7 @@ const TablePreview: React.FC<TablePreviewProps> = ({
             {previewRows.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 {Array.from({ length: maxCols }).map((_, colIndex) => (
-                  <TableCell key={colIndex}>
+                  <TableCell key={colIndex} className="overflow-hidden text-ellipsis">
                     {row[colIndex] || ''}
                   </TableCell>
                 ))}
@@ -66,9 +66,9 @@ const TablePreview: React.FC<TablePreviewProps> = ({
             ))}
           </TableBody>
         </Table>
-        {selectedTable.length > 5 && (
+        {selectedTable.length > 10 && (
           <div className="p-2 text-center text-sm text-gray-500 bg-gray-50 border-t">
-            {selectedTable.length - 5} more rows (not shown in preview)
+            {selectedTable.length - 10} more rows (not shown in preview)
           </div>
         )}
       </div>
